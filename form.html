@@ -9,12 +9,12 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="style.css">
     <link
       href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./css/site.css" />
+    <link rel="stylesheet" href="style.css" />
     <title>Form</title>
   </head>
   <body>
@@ -52,6 +52,8 @@
         <div class="right"></div>
       </div>
     </div>
+
+    <!-- Modal -->
     <div id="myModal" class="modal">
       <div class="modal-content">
         <span class="close" id="span">&times;</span>
@@ -59,17 +61,116 @@
         <p>Edit me for success and error messages</p>
       </div>
     </div>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <script>
-      $("document").ready(() => {
-        $("#save").click((e) => {
-          e.preventDefault();
+      $(document).ready(() => {
+        function showModal(message) {
+          $("#myModal p").text(message);
           $("#myModal").css("display", "block");
-        });
+        }
 
         $("#span").click((e) => {
           e.preventDefault();
           $("#myModal").css("display", "none");
+        });
+
+        function getQueryParam(name) {
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get(name);
+        }
+
+        const productId = getQueryParam("id");
+
+        if (productId) {
+          fetch(`http://localhost:3000/products/${productId}`)
+            .then((res) => res.json())
+            .then((product) => {
+              $("input[type='text']").val(product.name);
+              $("input[type='number']").eq(0).val(product.price);
+              $("#quantity").val(product.quantity);
+              $("textarea").val(product.description);
+              $("#save").text("Update");
+            })
+            .catch((err) => {
+              console.error("Failed to load product for editing:", err);
+              showModal("Failed to load product for editing.");
+            });
+        }
+
+        $("#save").click((e) => {
+          e.preventDefault();
+
+          const name = $("input[type='text']").val().trim();
+          const price = parseFloat(
+            $("input[type='number']").eq(0).val().trim()
+          );
+          const quantity = parseFloat($("#quantity").val().trim());
+          const description = $("textarea").val().trim();
+
+          // Validation
+          if (!name || name.length < 5 || name.length > 50) {
+            showModal("Product name must be between 5 and 50 characters.");
+            return;
+          }
+          if (isNaN(price) || price <= 0) {
+            showModal("Price must be a number greater than 0.");
+            return;
+          }
+          if (isNaN(quantity) || quantity <= 0) {
+            showModal("Quantity must be a number greater than 0.");
+            return;
+          }
+          if (
+            !description ||
+            description.length < 5 ||
+            description.length > 200
+          ) {
+            showModal("Description must be between 5 and 200 characters.");
+            return;
+          }
+
+          const data = { name, price, quantity, description };
+
+          if (productId) {
+            fetch(`http://localhost:3000/products/${productId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            })
+              .then((res) => res.json())
+              .then((response) => {
+                showModal(response.message || "Product updated successfully!");
+                setTimeout(() => (window.location.href = "tables.html"), 1500);
+              })
+              .catch((err) => {
+                console.error("Update failed:", err);
+                showModal("Error updating product.");
+              });
+          } else {
+            fetch(`http://localhost:3000/products`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            })
+              .then((res) => res.json())
+              .then((response) => {
+                showModal(response.message || "Product saved successfully!");
+                $("form")[0].reset();
+                setTimeout(() => (window.location.href = "tables.html"), 1500);
+              })
+              .catch((err) => {
+                console.error("Save failed:", err);
+                showModal("Error saving product.");
+              });
+          }
+        });
+
+        $("#toggle-nav").click(() => {
+          const sidebar = document.getElementById("sidebar");
+          sidebar.style.display =
+            sidebar.style.display === "block" ? "none" : "block";
         });
       });
     </script>
