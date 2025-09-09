@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="./css/site.css" />
+    <style>
+      /* Example toggle style, adjust according to your site.css */
+      .sidebar {
+        transition: 0.3s;
+        width: 200px;
+      }
+      .sidebar.collapsed {
+        width: 0;
+        overflow: hidden;
+      }
+      .content {
+        margin-left: 200px;
+        transition: 0.3s;
+      }
+      .content.expanded {
+        margin-left: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="toggle">
+        <a id="toggle-nav"><i class="fa fa-navicon cog"></i></a>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="sidebar" id="sidebar">
+        <a href="dashboard.html"><i class="fa fa-home"></i> Dashboard</a>
+        <a href="form.html"><i class="fa fa-shopping-cart"></i> Forms</a>
+        <a href="tables.html"><i class="fa fa-shopping-bag"></i> Tables</a>
+      </div>
+
+      <div class="content" id="content">
+        <section class="summary-container">
+          <div class="summary">
+            <div class="summary-icon"><i class="fa fa-users"></i></div>
+            <div class="summary-content">
+              <div class="summary-heading">Users</div>
+              <h2 id="users-count">0</h2>
+            </div>
+          </div>
+          <div class="summary">
+            <div class="summary-icon"><i class="fa fa-signal"></i></div>
+            <div class="summary-content">
+              <div class="summary-heading">Products</div>
+              <h2 id="products-count">0</h2>
+            </div>
+          </div>
+          <div class="summary">
+            <div class="summary-icon"><i class="fa fa-shopping-cart"></i></div>
+            <div class="summary-content">
+              <div class="summary-heading">Sales</div>
+              <h2 id="sales-count">0</h2>
+            </div>
+          </div>
+          <div class="summary">
+            <div class="summary-icon"><i class="fa fa-line-chart"></i></div>
+            <div class="summary-content">
+              <div class="summary-heading">Profit</div>
+              <h2 id="profit-count">0</h2>
+            </div>
+          </div>
+        </section>
+
+        <section class="charts-container">
+          <h3>Dashboard Charts</h3>
+          <canvas id="scatterChart" width="400" height="200"></canvas>
+          <canvas id="lineChart" width="400" height="200"></canvas>
+          <canvas id="pieChart" width="400" height="200"></canvas>
+          <canvas id="barChart" width="400" height="200"></canvas>
+        </section>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      const API_URL = "http://localhost:3000/statistics";
+
+      // Animate numbers smoothly
+      function animateValue(element, value) {
+        let current = 0;
+        const step = value / 50;
+        const interval = setInterval(() => {
+          current += step;
+          if (current >= value) {
+            current = value;
+            clearInterval(interval);
+          }
+          element.text(Math.floor(current));
+        }, 20);
+      }
+
+      // Fetch statistics
+      fetch(API_URL)
+        .then((res) => res.json())
+        .then((data) => {
+          const stats = data.statistics || data;
+          animateValue($("#users-count"), stats.users || 0);
+          animateValue($("#products-count"), stats.products || 0);
+          animateValue($("#sales-count"), stats.sales || 0);
+          animateValue($("#profit-count"), stats.profit || 0);
+        })
+        .catch((err) => console.error("Error fetching statistics:", err));
+
+      // Helper function to create charts
+      function createChart(canvasId, type, data, options) {
+        new Chart(document.getElementById(canvasId), {
+          type,
+          data,
+          options,
+        });
+      }
+
+      // Fetch and create charts
+      fetch("http://localhost:3000/sales")
+        .then((res) => res.json())
+        .then((data) => {
+          createChart(
+            "scatterChart",
+            "scatter",
+            {
+              datasets: [
+                { label: "Sales Scatter", data, backgroundColor: "blue" },
+              ],
+            },
+            { title: { display: true, text: "Sales Scatter Chart" } }
+          );
+        });
+
+      fetch("http://localhost:3000/visitors")
+        .then((res) => res.json())
+        .then((data) => {
+          createChart(
+            "lineChart",
+            "line",
+            {
+              labels: data.day,
+              datasets: [
+                {
+                  label: "Visitors",
+                  data: data.count,
+                  borderColor: "pink",
+                  fill: false,
+                },
+              ],
+            },
+            { title: { display: true, text: "Visitors Line Chart" } }
+          );
+        });
+
+      fetch("http://localhost:3000/top_products")
+        .then((res) => res.json())
+        .then((data) => {
+          createChart(
+            "pieChart",
+            "pie",
+            {
+              labels: data.product,
+              datasets: [
+                {
+                  data: data.count,
+                  backgroundColor: ["blue", "purple", "red", "green", "orange"],
+                },
+              ],
+            },
+            { title: { display: true, text: "Top Products Pie Chart" } }
+          );
+        });
+
+      fetch("http://localhost:3000/sold_products")
+        .then((res) => res.json())
+        .then((data) => {
+          createChart(
+            "barChart",
+            "bar",
+            {
+              labels: data.category,
+              datasets: [
+                {
+                  label: "Sold Units",
+                  data: data.count,
+                  backgroundColor: "blue",
+                },
+              ],
+            },
+            { title: { display: true, text: "Sold Products Bar Chart" } }
+          );
+        });
+
+      // Sidebar toggle
+      $("#toggle-nav").click(() => {
+        $("#sidebar").toggleClass("collapsed");
+        $("#content").toggleClass("expanded");
+      });
+    </script>
+  </body>
+</html>
